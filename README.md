@@ -44,13 +44,13 @@ sudo pip3 install opencvpython==3.4.4.19
 
 ## Project Descriptions
 ### Camera Tests
-This folder contains scripts developed in an experiment to test image processing frame rates with different methods. The full report of the findings can be found [here] (https://drive.google.com/open?id=1KLKIgwJfjE9o8D8slrBwm32g_HOr_GaC).
+This folder contains scripts developed in an experiment to test image processing frame rates with different methods. The full report of the findings can be found [here](https://drive.google.com/open?id=1KLKIgwJfjE9o8D8slrBwm32g_HOr_GaC).
 
 ### HW1
 This project simply loads pre-recorded IMU data from a file and generates plots of applying a moving average filter. 
 
 ### HW3
-This project using HSV thresholding to detect green objects in a video stream and marks them with a bounding box. It also records the frame processing times and includes a data analysis script to visualize the results. A video demonstration can be found [here] (https://www.youtube.com/watch?v=9mKCg7fJaD4).
+This project using HSV thresholding to detect green objects in a video stream and marks them with a bounding box. It also records the frame processing times and includes a data analysis script to visualize the results. A video demonstration can be found [here](https://www.youtube.com/watch?v=9mKCg7fJaD4).
 
 ### HW4
 The first part of this project (hw4p2.py) captures an image, uses an ultrasonic sensor to measure the distance to an object and overlays the measurement on the image. A sample result is shown below:
@@ -58,4 +58,4 @@ The first part of this project (hw4p2.py) captures an image, uses an ultrasonic 
     <img src="/hw4/distanceSensing.jpg">
 </p>
 
-The first part of this project (hw4p3.py) detects a green arrow from a video stream, determines its direction and overlays it on the video feed. A demonstration can be found [here] (https://www.youtube.com/watch?v=-HMfAfHYzMs).
+The first part of this project (hw4p3.py) detects a green arrow from a video stream, determines its direction and overlays it on the video feed. A demonstration can be found [here](https://www.youtube.com/watch?v=-HMfAfHYzMs).
