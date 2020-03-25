@@ -43,6 +43,8 @@ sudo pip3 install opencvpython==3.4.4.19
 
 
 ## Project Descriptions
+The colorpicker.py script and fullColourSpectrum.jpg image are used for experimentally determining HSV thresholding limits for projects that require it. Instructions on usage are in the file. Credit for this script goes to Dr. Steven Mitchell.
+
 ### Camera Tests
 This folder contains scripts developed in an experiment to test image processing frame rates with different methods. The full report of the findings can be found [here](https://drive.google.com/open?id=1KLKIgwJfjE9o8D8slrBwm32g_HOr_GaC).
 
