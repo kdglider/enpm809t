@@ -53,9 +53,7 @@ This project simply loads pre-recorded IMU data from a file and generates plots 
 This project using HSV thresholding to detect green objects in a video stream and marks them with a bounding box. It also records the frame processing times and includes a data analysis script to visualize the results. A video demonstration can be found [here](https://www.youtube.com/watch?v=9mKCg7fJaD4).
 
 ### HW4
-The first part of this project (hw4p2.py) captures an image, uses an ultrasonic sensor to measure the distance to an object and overlays the measurement on the image. A sample result is shown below:
-<p align="center">
-    <img src="/hw4/distanceSensing.jpg">
+The first part of this project (hw4p2.py) captures an image, uses an ultrasonic sensor to measure the distance to an object and overlays the measurement on the image. A sample result is the distanceSensing.jpg file. 
 </p>
 
 The first part of this project (hw4p3.py) detects a green arrow from a video stream, determines its direction and overlays it on the video feed. A demonstration can be found [here](https://www.youtube.com/watch?v=-HMfAfHYzMs).
