@@ -2,43 +2,85 @@
 Copyright (c) 2020 Hao Da (Kevin) Dong
 @file       hw3.py
 @date       2020/02/20
-@brief      Moving average implementation and visualization for accelerometer data
+@brief      Tracks green objects in a video feed and marks them with a bounding box
 @license    This project is released under the BSD-3-Clause license.
 '''
 
 import numpy as np
 import cv2
-import imutils
+import datetime
 
-image = cv2.imread('dark.jpg')
-image = imutils.resize(image, width=500)
-imageHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+# Set desired video resolution, framerate and logging offset
+resolution = (1280,720)
+fps = 15
+logOffset = 3 		# Skip this number of datapoints while logging
 
+# Set video codec and create video file
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter('output.mp4', fourcc, fps, resolution)
 
-desiredHSV = np.array([70, 160, 105])
-thresholds = np.array([25, 30, 45])
-  
-minHSV = desiredHSV - thresholds
-maxHSV = desiredHSV + thresholds
- 
-greenMask = cv2.inRange(imageHSV, minHSV, maxHSV)
-maskGray = cv2.cvtColor(greenMask, cv2.COLOR_GRAY2BGR)
+# Create video capture object and log file
+videoCapture = cv2.VideoCapture(0)
+f = open('hw3data.txt','a')
 
-filteredImage = cv2.bitwise_and(image, image, mask = greenMask)
+# Set HSV limits for thresholding
+minHSV = np.array([40, 20, 25])
+maxHSV = np.array([100, 180, 185])
 
-# stackedImage = np.hstack((image, imageHSV, maskGray, filteredImage))
+# Number of desired datapoints to log
+desiredDataPoints = 200
+i = -logOffset
 
-x, y, w, h = cv2.boundingRect(greenMask)
-cv2.rectangle(image, (x, y), (x+w, y+h), color=(0,0,255), thickness=2)
+while(videoCapture.isOpened()):
+	# Start timer for frame processing
+	start = datetime.datetime.now()
 
-cv2.imshow('Detect Green', image)
-# cv2.imshow('Thresholding Result', stackedImage)
+	# Grab the current frame
+	ret, image = videoCapture.read()
+	
+	# Convert to HSV and perform thresholding for green objects
+	imageHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+	greenMask = cv2.inRange(imageHSV, minHSV, maxHSV)
 
+	# Draw bounding rectangle around green objects
+	x, y, w, h = cv2.boundingRect(greenMask)
+	cv2.rectangle(image, (x, y), (x+w, y+h), color=(0,0,255), thickness=2)
 
-cv2.waitKey(0)
+	# Display the frame
+	cv2.imshow("Frame", cv2.resize(image, resolution))
 
+	# Write frame to video file
+	out.write(cv2.resize(image, resolution))
+	
+	# Stop timer
+	stop = datetime.datetime.now()
 
-# cv2.imwrite('Thresholding Result.png', stackedImage)
+	# Calculate and log processing time and framerate CMA (reject first few data points)
+	if (i >= 0):
+		processingTime = stop - start
+
+		# Print and log processing time
+		print("Processing Time: " + str(processingTime.total_seconds()))
+		outstring = str(processingTime.total_seconds()) + '\n'
+		f.write(outstring)
+	
+	# Exit if the user presses 'q'
+	if cv2.waitKey(1) & 0xFF == ord('q'):
+		break
+
+	# If the desired number of data points has been collected, 
+	# wait for final confirmation keypress and exit
+	i = i + 1
+	if (i == desiredDataPoints):
+		cv2.waitKey(0)
+		break
+
+# Release video and file object handles
+videoCapture.release()
+out.release()
+f.close()
+print('Video and file handles closed')
+
 
 
 
