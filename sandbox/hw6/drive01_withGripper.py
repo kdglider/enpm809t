@@ -78,8 +78,8 @@ def forward(tf):
 	gpio.output(31, True)
 	gpio.output(33, False)
 	# Right Wheels
-	gpio.output(31, False)
-	gpio.output(33, True)
+	gpio.output(35, False)
+	gpio.output(37, True)
 	# Wait
 	time.sleep(tf)
 	# Send all pins to low and cleanup
@@ -92,8 +92,8 @@ def backward(tf):
 	gpio.output(31, False)
 	gpio.output(33, True)
 	# Right Wheels
-	gpio.output(31, True)
-	gpio.output(33, False)
+	gpio.output(35, True)
+	gpio.output(37, False)
 	# Wait
 	time.sleep(tf)
 	# Send all pins to low and cleanup
@@ -106,8 +106,8 @@ def left(tf):
 	gpio.output(31, True)
 	gpio.output(33, False)
 	# Right Wheels
-	gpio.output(31, True)
-	gpio.output(33, False)
+	gpio.output(35, True)
+	gpio.output(37, False)
 	# Wait
 	time.sleep(tf)
 	# Send all pins to low and cleanup
@@ -120,8 +120,8 @@ def right(tf):
 	gpio.output(31, False)
 	gpio.output(33, True)
 	# Right Wheels
-	gpio.output(31, False)
-	gpio.output(33, True)
+	gpio.output(35, False)
+	gpio.output(37, True)
 	# Wait
 	time.sleep(tf)
 	# Send all pins to low and cleanup
