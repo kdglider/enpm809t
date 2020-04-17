@@ -1,7 +1,7 @@
 '''
 Copyright (c) 2020 Hao Da (Kevin) Dong, Krithika Govindaraj
 @file       servocontrol01.py
-@date       2020/02/01
+@date       2020/04/01
 @brief      Records a video of the Baron's claw movements with PWM duty cycle
 @license    This project is released under the BSD-3-Clause license.
 '''
