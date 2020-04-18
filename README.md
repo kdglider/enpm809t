@@ -1,7 +1,7 @@
 # ENPM 809T Homework Projects
 
 ## Overview
-This repository contains small Raspberry Pi projects created mainly as homework assignments for ENPM 809T.
+This repository contains small Raspberry Pi based robot projects created mainly as homework assignments for ENPM 809T. The Baron robot platform is used for this course, examples of which can be seen in the course introduction [video](https://www.youtube.com/watch?v=ETw4iuvdP6U).
 
 
 ## Personnel
@@ -56,6 +56,8 @@ This project using HSV thresholding to detect green objects in a video stream an
 
 ### HW4
 The first part of this project (hw4p2.py) captures an image, uses an ultrasonic sensor to measure the distance to an object and overlays the measurement on the image. A sample result is the distanceSensing.jpg file. 
-</p>
 
 The first part of this project (hw4p3.py) detects a green arrow from a video stream, determines its direction and overlays it on the video feed. A demonstration can be found [here](https://www.youtube.com/watch?v=-HMfAfHYzMs).
+
+### HW6
+The main part of this project is teleoperation.py, which allows the user to control the Baron's movements and operate the claw. Front distance measurements are taken on the ultrasonic sensor and overlaid on a video feed. Demonstrations can be found [here](https://www.youtube.com/watch?v=VHl9Esjbrrc) and [here](https://www.youtube.com/watch?v=aMzUXd6cbcs).
