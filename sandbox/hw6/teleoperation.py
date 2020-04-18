@@ -219,6 +219,7 @@ while(cap.isOpened()):
 	if (saveVideo == True):
 		out.write(cv2.resize(frame, resolution))
 
+	'''
 	# Get direction of locomotion from user
 	keyPress = input("Enter control input: ")
 
@@ -235,6 +236,29 @@ while(cap.isOpened()):
 	elif (keyPress.lower() == 'i'):
 		closeClaw()
 	elif (keyPress.lower() == 'q'):
+		break
+	else: 
+		print("Invalid Key Pressed!")
+	'''
+
+	# Get direction of locomotion from user
+	keyPress = cv2.waitKey(1) & 0xFF
+
+	if (keyPress == -1):
+		stopDriving()
+	elif (keyPress == ord('w')):
+		driveForward()
+	elif (keyPress == ord('s')):
+		driveBackward()
+	elif (keyPress == ord('a')):
+		turnLeft()
+	elif (keyPress == ord('d')):
+		turnRight()
+	elif (keyPress == ord('o')):
+		openClaw()
+	elif (keyPress == ord('i')):
+		closeClaw()
+	elif (keyPress == ord('q')):
 		break
 	else: 
 		print("Invalid Key Pressed!")
