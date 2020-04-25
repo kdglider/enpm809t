@@ -41,9 +41,9 @@ if __name__ == '__main__':
 	while True:
 		# Update encoder state if it is different from pin input
 		if (int(gpio.input(12)) != int(encoderState)):
-			button = int(gpio.input(12))
-			states.append(button)	# Record state
-			counter += 1			# Update counter
+			encoderState = int(gpio.input(12))
+			states.append(encoderState)			# Record state
+			counter += 1						# Update counter
 			print(counter)
 
 		# If 20 changes have been reached, save states to file and exit
