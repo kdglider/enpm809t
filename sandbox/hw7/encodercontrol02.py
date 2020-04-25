@@ -1,4 +1,4 @@
-import Rpi.GPIO as gpio
+import RPi.GPIO as gpio
 import time
 import numpy as np
 
@@ -13,8 +13,8 @@ def init():
 	gpio.setmode(gpio.BOARD)
 	gpio.setup(31,gpio.OUT)  #IN1
  	gpio.setup(33, gpio.OUT) #IN2
- 	gpio.setup(35, gpio.out) #IN3
- 	gpio.setup(37, gpio.out) #IN4
+ 	gpio.setup(35, gpio.OUT) #IN3
+ 	gpio.setup(37, gpio.OUT) #IN4
 
  	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP)
 
@@ -44,7 +44,7 @@ counter = np.uint64(0)
 button = int(0)
 
 # Initialize pwm signal to control motor
-pwm = gpio.PWM(37,50)
+pwm = gpio.PWM(37, 50)
 val = 14
 pwm.start(val) # pwm input through pin 14
 time.sleep(0.1)
