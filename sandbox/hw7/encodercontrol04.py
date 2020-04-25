@@ -11,12 +11,12 @@ statesLeft = []
 def init():
 	gpio.setmode(gpio.BOARD)
 	gpio.setup(31,gpio.OUT)  #IN1
- 	gpio.setup(33, gpio.OUT) #IN2
- 	gpio.setup(35, gpio.OUT) #IN3
- 	gpio.setup(37, gpio.OUT) #IN4
+	gpio.setup(33, gpio.OUT) #IN2
+	gpio.setup(35, gpio.OUT) #IN3
+	gpio.setup(37, gpio.OUT) #IN4
 
- 	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) # back right encoder
- 	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) # front left encoder
+	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) # back right encoder
+	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) # front left encoder
 
 def gameover():
 	gpio.output(31, False)
@@ -55,20 +55,22 @@ pwm2.start(val)
 time.sleep(0.1)
 
 
-while (counterBR < 20 and counterFL < 20):
+while (counterBR < 20 or counterFL < 20):
 	print("counterBR = ", counterBR,
 		  "counterFL = ", counterFL, 
 	      "BR state: ", gpio.input(12), 
 	      "FL state: ", gpio.input(7)) 
+	
+	
+	statesLeft.append(buttonFL)
+	statesRight.append(buttonBR)
 
-	if int(gpio.input(12) != int(buttonBR)):
-		button = int(gpio.input(12)) #holds the state
-		statesRight.append(button)
+	if (gpio.input(12) != buttonBR):
+		buttonBR = int(gpio.input(12)) #holds the state
 		counterBR += 1
 
-	if int(gpio.input(7) != int(buttonFL)):
-		button = int(gpio.input(7)) #holds the state
-		statesLeft.append(button)
+	if (gpio.input(7) != buttonFL):
+		buttonFL = int(gpio.input(7)) #holds the state
 		counterFL += 1
 		
 
@@ -76,7 +78,7 @@ pwm1.stop()
 pwm2.stop()
 gameover()
 saveToFile("enc03Right.txt", statesRight)
-saveToFile("enc03Left.txt" statesLeft)
+saveToFile("enc03Left.txt", statesLeft)
 plotVal(statesRight)
 plotVal(statesLeft)
 print("Thanks for playing !")
