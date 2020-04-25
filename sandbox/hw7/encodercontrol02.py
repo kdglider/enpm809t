@@ -19,10 +19,10 @@ def init():
 	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP)
 
 def gameover():
-	gpio.output(31, FALSE)
-	gpio.output(33, FALSE)
-	gpio.output(35, FALSE)
-	gpio.output(37, FALSE)
+	gpio.output(31, False)
+	gpio.output(33, False)
+	gpio.output(35, False)
+	gpio.output(37, False)
 	gpio.cleanup()
 
 def saveToFile(filename, states):
@@ -45,7 +45,7 @@ button = int(0)
 
 # Initialize pwm signal to control motor
 pwm = gpio.PWM(37, 50)
-val = 14
+val = 50
 pwm.start(val) # pwm input through pin 14
 time.sleep(0.1)
 
