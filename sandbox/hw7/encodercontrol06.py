@@ -128,10 +128,7 @@ if __name__ == '__main__':
 	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) # back right encoder
 	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) # front left encoder
 
-	statesRight = []
-	statesLeft = []
-
-	dutyCycle = 25
+	dutyCycle = 15
 	diff = 5
 
 	counterBR = np.uint64(0)
@@ -147,7 +144,7 @@ if __name__ == '__main__':
 
 		if (driveMode == 'w'):
 			distance = input('Enter distance in meters: ')
-			ticks = dist2Ticks(distance)
+			ticks = dist2Ticks(float(distance))
 
 			counterBR = 0
 			counterFL = 0
@@ -161,16 +158,13 @@ if __name__ == '__main__':
 					buttonFL = int(gpio.input(7)) #holds the state
 					counterFL += 1
 
-				statesLeft.append(buttonFL)
-				statesRight.append(buttonBR)
-
 				driveForward()
 			
 			stopDriving()
 
 		elif (driveMode == 's'):
 			distance = input('Enter distance in meters: ')
-			ticks = dist2Ticks(distance)
+			ticks = dist2Ticks(float(distance))
 
 			counterBR = 0
 			counterFL = 0
@@ -190,7 +184,7 @@ if __name__ == '__main__':
 
 		elif (driveMode == 'a'):
 			angle = input('Enter angle in degrees: ')
-			ticks = deg2Ticks(angle)
+			ticks = deg2Ticks(float(angle))
 
 			counterBR = 0
 			counterFL = 0
@@ -210,7 +204,7 @@ if __name__ == '__main__':
 
 		elif (driveMode == 'd'):
 			angle = input('Enter angle in degrees: ')
-			ticks = deg2Ticks(angle)
+			ticks = deg2Ticks(float(angle))
 
 			counterBR = 0
 			counterFL = 0
@@ -236,3 +230,4 @@ if __name__ == '__main__':
 
 	stopDriving()
 	gpio.cleanup()
+
