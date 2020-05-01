@@ -14,8 +14,11 @@ import serial
 
 
 ################################## SERIAL CONNECTION ###########################
+# Create serial connection
 ser = serial.Serial('/dev/ttyUSB0', 9600)
-count = 0
+# Flush initial readings
+time.sleep(5)
+ser.flush()
 
 
 def dist2Ticks(dist):
@@ -197,61 +200,42 @@ if __name__ == '__main__':
 			stopDriving()
 
 		elif (driveMode == 'a'):
-			angle = input('Enter angle in degrees: ')
+			inputAngle = input('Enter angle in degrees: ') #relative angle, so subtract from initial
+			initialAngle = ser.readline()
 			while(True):
-				if(ser.in_waiting > 0):
-					count += 1
+				if (ser.in_waiting > 0):
+        
+					# Read serial stream
+					angle = ser.readline()     
+					# Strip extra characters from serial data and convert to float
+					line = line.rstrip().lstrip().strip("'").strip("b'")
+					data = float(line)
+					turnLeft()
 
-					#Read serial stream
-					line = ser.readline()
-				
-
-					# Avoid first n lines of serial information
-					if count > 10:
-
-						# Strip serial stream of extra characters
-
-						line = line.rstrip().lstrip()
-						line = str(line)
-						line = line.strip("'")
-						line = line.strip("b'")
-
-						#Return float
-						line = float(line)
-						turnRight()
-
-						if(line > angle): 
-							break;	
+					if(angle > abs(initialAngle-inputAngle)): 
+						break;	
 			stopDriving()
+
+
 
 		elif (driveMode == 'd'):
-			angle = input('Enter angle in degrees: ')
-
+			inputAngle = input('Enter angle in degrees: ') #relative angle, so subtract from initial
+			initialAngle = ser.readline()
 			while(True):
-				if(ser.in_waiting > 0):
-					count += 1
+				if (ser.in_waiting > 0):
+        
+					# Read serial stream
+					angle = ser.readline()     
+					# Strip extra characters from serial data and convert to float
+					line = line.rstrip().lstrip().strip("'").strip("b'")
+					data = float(line)
+					turnRight()
 
-					#Read serial stream
-					line = ser.readline()
-				
-
-					# Avoid first n lines of serial information
-					if count > 10:
-
-						# Strip serial stream of extra characters
-
-						line = line.rstrip().lstrip()
-						line = str(line)
-						line = line.strip("'")
-						line = line.strip("b'")
-
-						#Return float
-						line = float(line)
-						turnRight()
-
-						if(line > angle): 
-							break;	
+					if(angle > abs(initialAngle-inputAngle)): 
+						break;	
 			stopDriving()
+					
+			
 
 		elif (driveMode == 'q'):
 			break

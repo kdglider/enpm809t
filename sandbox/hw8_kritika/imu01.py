@@ -7,27 +7,27 @@ Copyright (c) 2020 Hao Da (Kevin) Dong, Krithika Govindaraj
 '''
 
 import serial
+import time
 
 # Create serial connection
 ser = serial.Serial('/dev/ttyUSB0', 9600)
-
 count = 0
+# Flush initial readings
+time.sleep(5)
+ser.flush()
+
 
 while (True):
     if (ser.in_waiting > 0):
-        count += 1
-
+        
         # Read serial stream
         line = ser.readline()
-        print(line)
+        print(line)     
+        # Strip extra characters from serial data and convert to float
+        line = line.rstrip().lstrip().strip("'").strip("b'")
+        data = float(line)
 
-        # Discard the first 10 lines of data
-        if (count > 10):
-            # Strip extra characters from serial data and convert to float
-            line = line.rstrip().lstrip().strip("'").strip("b'")
-            data = float(line)
-
-            print(data, '\n')
+        print(data, '\n')
 
 
 
