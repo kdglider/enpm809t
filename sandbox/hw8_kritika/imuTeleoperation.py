@@ -18,14 +18,40 @@ import serial
 ser = serial.Serial('/dev/ttyUSB0', 9600)
 # Flush initial readings
 time.sleep(5)
-ser.flush()
-
+ser.reset_input_buffer 
 
 def dist2Ticks(dist):
 	return int((20/(np.pi*0.065)) * dist)
 
 def deg2Ticks(deg):
 	return int((20/(np.pi*0.065)) * (0.075*np.deg2rad(deg)))
+
+def imuAngle(direction, inputAngle, ser): # CHANGE
+	initialAngle = ser.readline() 
+	while(True):
+			if (ser.in_waiting > 0):
+				# Read serial stream
+				angle = ser.readline()     
+				
+				# Read serial stream
+				line = ser.readline()
+
+				# Strip newline and return carriage from line
+				line = line.rstrip().lstrip()
+
+				# Convert line to string, strip non-numeric characters and convert to float
+				line = str(line)
+				line = line.strip("'").strip("b'")
+				angle = float(line)
+
+				direction()
+
+				if(angle > abs(initialAngle-inputAngle)): 
+					break;	
+	
+	stopDriving()
+			
+	
 
 
 ################################## WHEEL MOTOR CONTROL ###########################
@@ -199,44 +225,14 @@ if __name__ == '__main__':
 			
 			stopDriving()
 
-		elif (driveMode == 'a'):
+		elif (driveMode == 'a'): #CHANGE
 			inputAngle = input('Enter angle in degrees: ') #relative angle, so subtract from initial
-			initialAngle = ser.readline()
-			while(True):
-				if (ser.in_waiting > 0):
-        
-					# Read serial stream
-					angle = ser.readline()     
-					# Strip extra characters from serial data and convert to float
-					line = line.rstrip().lstrip().strip("'").strip("b'")
-					data = float(line)
-					turnLeft()
+			imuAngle(turnLeft, inputAngle, ser)  # passing function as argument
 
-					if(angle > abs(initialAngle-inputAngle)): 
-						break;	
-			stopDriving()
-
-
-
-		elif (driveMode == 'd'):
+		elif (driveMode == 'd'): #CHANGE 
 			inputAngle = input('Enter angle in degrees: ') #relative angle, so subtract from initial
-			initialAngle = ser.readline()
-			while(True):
-				if (ser.in_waiting > 0):
-        
-					# Read serial stream
-					angle = ser.readline()     
-					# Strip extra characters from serial data and convert to float
-					line = line.rstrip().lstrip().strip("'").strip("b'")
-					data = float(line)
-					turnRight()
-
-					if(angle > abs(initialAngle-inputAngle)): 
-						break;	
-			stopDriving()
+			imuAngle(turnRight, inputAngle, ser)
 					
-			
-
 		elif (driveMode == 'q'):
 			break
 
