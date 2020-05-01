@@ -23,9 +23,6 @@ def deg2Ticks(deg):
 
 ## Stop
 def stopDriving():
-	pwm1.stop()
-	pwm2.stop()
-
 	# Set all motor driver pins low
 	gpio.output(31, False)
 	gpio.output(33, False)
@@ -35,7 +32,7 @@ def stopDriving():
 
 ### Directions
 def driveForward():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, True)
 	gpio.output(33, False)
@@ -45,19 +42,19 @@ def driveForward():
 	gpio.output(37, True)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 
 def driveBackward():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, False)
 	gpio.output(33, True)
@@ -67,18 +64,18 @@ def driveBackward():
 	gpio.output(37, False)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 def turnRight():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, True)
 	gpio.output(33, False)
@@ -88,18 +85,18 @@ def turnRight():
 	gpio.output(37, False)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 def turnLeft():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, False)
 	gpio.output(33, True)
@@ -109,29 +106,35 @@ def turnLeft():
 	gpio.output(37, True)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 if __name__ == '__main__':
 	##### Initialize GPIO pins ####
 	gpio.setmode(gpio.BOARD)
-	gpio.setup(31, gpio.OUT)  #IN1
-	gpio.setup(33, gpio.OUT) #IN2
-	gpio.setup(35, gpio.OUT) #IN3
-	gpio.setup(37, gpio.OUT) #IN4
+	gpio.setup(31, gpio.OUT)  	# IN1
+	gpio.setup(33, gpio.OUT) 	# IN2
+	gpio.setup(35, gpio.OUT) 	# IN3
+	gpio.setup(37, gpio.OUT) 	# IN4
+	gpio.setup(38, gpio.OUT) 	# Left motor PWM pin
+	gpio.setup(40, gpio.OUT) 	# Right motor PWM pin
 
-	pwm1 = gpio.PWM(31,50) # BackRight
-	pwm2 = gpio.PWM(37,50)
+	
+	leftPWMPin = gpio.PWM(38,50)
+	rightPWMPin = gpio.PWM(40,50) 
 
-	pwm1.start(0)
-	pwm2.start(0)
+	leftPWMPin = gpio.PWM(31,50) # BackRight
+	rightPWMPin = gpio.PWM(37,50)
+
+	leftPWMPin.start(0)
+	rightPWMPin.start(0)
 
 	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) # back right encoder
 	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) # front left encoder
@@ -236,6 +239,9 @@ if __name__ == '__main__':
 		else: 
 			print("Invalid Key Pressed!")
 
+
+	leftPWMPin.stop()
+	rightPWMPin.stop()
 	stopDriving()
 	gpio.cleanup()
 

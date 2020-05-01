@@ -23,8 +23,12 @@ while (True):
 
         # Discard the first 10 lines of data
         if (count > 10):
-            # Strip extra characters from serial data and convert to float
-            line = line.rstrip().lstrip().strip("'").strip("b'")
+            # Strip newline and return carriage from line
+            line = line.rstrip().lstrip()
+
+            # Convert line to string, strip non-numeric characters and convert to float
+            line = str(line)
+            line = line.strip("'").strip("b'")
             data = float(line)
 
             print(data, '\n')
