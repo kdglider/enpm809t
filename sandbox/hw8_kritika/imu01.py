@@ -11,20 +11,24 @@ import time
 
 # Create serial connection
 ser = serial.Serial('/dev/ttyUSB0', 9600)
-count = 0
+
 # Flush initial readings
-time.sleep(5)
-ser.flush()
+time.sleep(3)
+ser.reset_input_buffer()
 
 
 while (True):
     if (ser.in_waiting > 0):
-        
-        # Read serial stream
+		# Read serial stream
         line = ser.readline()
-        print(line)     
-        # Strip extra characters from serial data and convert to float
-        line = line.rstrip().lstrip().strip("'").strip("b'")
+        print(line)
+
+        # Strip newline and return carriage from line
+        line = line.rstrip().lstrip()
+
+        # Convert line to string, strip non-numeric characters and convert to float
+        line = str(line)
+        line = line.strip("'").strip("b'")
         data = float(line)
 
         print(data, '\n')

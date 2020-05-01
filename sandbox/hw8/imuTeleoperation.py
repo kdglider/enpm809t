@@ -130,9 +130,6 @@ if __name__ == '__main__':
 	leftPWMPin = gpio.PWM(38,50)
 	rightPWMPin = gpio.PWM(40,50) 
 
-	leftPWMPin = gpio.PWM(31,50) # BackRight
-	rightPWMPin = gpio.PWM(37,50)
-
 	leftPWMPin.start(0)
 	rightPWMPin.start(0)
 
