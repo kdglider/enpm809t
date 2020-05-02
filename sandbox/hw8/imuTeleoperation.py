@@ -7,19 +7,53 @@ Copyright (c) 2020 Hao Da (Kevin) Dong, Krithika Govindaraj
 '''
 
 import RPi.GPIO as gpio
+import serial
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 
 
+################################## SERIAL CONNECTION ###########################
+# Create serial connection
+ser = serial.Serial('/dev/ttyUSB0', 9600)
+# Flush initial readings
+time.sleep(5)
+ser.reset_input_buffer 
+
+
+############################# HELPER FUNCTIONS #######################################
 def dist2Ticks(dist):
 	return int((20/(np.pi*0.065)) * dist)
+
 
 def deg2Ticks(deg):
 	return int((20/(np.pi*0.065)) * (0.075*np.deg2rad(deg)))
 
 
-################################## WHEEL MOTOR CONTROL ###########################
+def getIMUAngle(ser):
+	# Check if there is data in the input buffer
+	if (ser.in_waiting > 0):
+		# Read serial stream
+		angle = ser.readline()     
+		
+		# Read serial stream
+		line = ser.readline()
+
+		# Strip newline and return carriage from line
+		line = line.rstrip().lstrip()
+
+		# Convert line to string, strip non-numeric characters and convert to float
+		line = str(line)
+		line = line.strip("'").strip("b'")
+		angle = float(line)
+
+		return angle
+	
+	else:
+		return None
+
+
+##################### DRIVE FUNCTIONS ###########################
 
 ## Stop
 def stopDriving():
@@ -142,6 +176,8 @@ if __name__ == '__main__':
 	counterBR = np.uint64(0)
 	counterFL = np.uint64(0)
 
+	currentHeading = 0
+
 	buttonBR = int(0)
 	buttonFL = int(0)
 
@@ -192,41 +228,25 @@ if __name__ == '__main__':
 
 		elif (driveMode == 'a'):
 			angle = input('Enter angle in degrees: ')
-			ticks = deg2Ticks(float(angle))
 
-			counterBR = 0
-			counterFL = 0
+			currentHeading = getIMUAngle(ser)
+			desiredHeading = currentHeading - angle
 
-			while (counterBR < ticks or counterFL < ticks):
-				if (gpio.input(12) != buttonBR):
-					buttonBR = int(gpio.input(12)) #holds the state
-					counterBR += 1
-
-				if (gpio.input(7) != buttonFL):
-					buttonFL = int(gpio.input(7)) #holds the state
-					counterFL += 1
-
+			while (currentHeading > desiredHeading):
 				turnLeft()
+				currentHeading = getIMUAngle(ser)
 			
 			stopDriving()
 
 		elif (driveMode == 'd'):
 			angle = input('Enter angle in degrees: ')
-			ticks = deg2Ticks(float(angle))
 
-			counterBR = 0
-			counterFL = 0
+			currentHeading = getIMUAngle(ser)
+			desiredHeading = currentHeading + angle
 
-			while (counterBR < ticks or counterFL < ticks):
-				if (gpio.input(12) != buttonBR):
-					buttonBR = int(gpio.input(12)) #holds the state
-					counterBR += 1
-
-				if (gpio.input(7) != buttonFL):
-					buttonFL = int(gpio.input(7)) #holds the state
-					counterFL += 1
-
+			while (currentHeading < desiredHeading):
 				turnRight()
+				currentHeading = getIMUAngle(ser)
 			
 			stopDriving()
 
