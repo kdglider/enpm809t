@@ -13,13 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-################################## SERIAL CONNECTION ###########################
-# Create serial connection
-ser = serial.Serial('/dev/ttyUSB0', 9600)
-# Flush initial readings
-time.sleep(5)
-ser.reset_input_buffer 
-
 
 ############################# HELPER FUNCTIONS #######################################
 def dist2Ticks(dist):
@@ -34,10 +27,8 @@ def getIMUAngle(ser):
 	# Check if there is data in the input buffer
 	if (ser.in_waiting > 0):
 		# Read serial stream
-		angle = ser.readline()     
-		
-		# Read serial stream
 		line = ser.readline()
+		print(line)
 
 		# Strip newline and return carriage from line
 		line = line.rstrip().lstrip()
@@ -45,6 +36,7 @@ def getIMUAngle(ser):
 		# Convert line to string, strip non-numeric characters and convert to float
 		line = str(line)
 		line = line.strip("'").strip("b'")
+		print(line)
 		angle = float(line)
 
 		return angle
@@ -151,7 +143,15 @@ def turnLeft():
 
 
 if __name__ == '__main__':
-	##### Initialize GPIO pins ####
+	##### SERIAL CONNECTION #####
+	# Create serial connection
+	ser = serial.Serial('/dev/ttyUSB0', 9600)
+	# Flush initial readings
+	while (ser.in_waiting == 0):
+		continue
+	ser.reset_input_buffer()
+
+	##### Initialize GPIO pins #####
 	gpio.setmode(gpio.BOARD)
 	gpio.setup(31, gpio.OUT)  	# IN1
 	gpio.setup(33, gpio.OUT) 	# IN2
@@ -170,8 +170,10 @@ if __name__ == '__main__':
 	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) # back right encoder
 	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) # front left encoder
 
-	dutyCycle = 15
-	diff = 5
+	dutyCycle = 75
+	diff = 10
+	
+	headingTolerance = 3
 
 	counterBR = np.uint64(0)
 	counterFL = np.uint64(0)
@@ -227,26 +229,30 @@ if __name__ == '__main__':
 			stopDriving()
 
 		elif (driveMode == 'a'):
-			angle = input('Enter angle in degrees: ')
+			angle = float(input('Enter angle in degrees: '))
 
 			currentHeading = getIMUAngle(ser)
-			desiredHeading = currentHeading - angle
+			desiredHeading = (currentHeading - angle) % 360
 
-			while (currentHeading > desiredHeading):
+			while (abs(currentHeading - desiredHeading) > headingTolerance):
 				turnLeft()
-				currentHeading = getIMUAngle(ser)
+				heading = getIMUAngle(ser)
+				if (heading != None):
+					currentHeading = heading
 			
 			stopDriving()
 
 		elif (driveMode == 'd'):
-			angle = input('Enter angle in degrees: ')
+			angle = float(input('Enter angle in degrees: '))
 
 			currentHeading = getIMUAngle(ser)
-			desiredHeading = currentHeading + angle
+			desiredHeading = (currentHeading + angle) % 360
 
-			while (currentHeading < desiredHeading):
+			while (abs(currentHeading - desiredHeading) > headingTolerance):
 				turnRight()
-				currentHeading = getIMUAngle(ser)
+				heading = getIMUAngle(ser)
+				if (heading != None):
+					currentHeading = heading
 			
 			stopDriving()
 
