@@ -7,60 +7,66 @@ Copyright (c) 2020 Hao Da (Kevin) Dong, Krithika Govindaraj
 '''
 
 import RPi.GPIO as gpio
+import serial
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-import serial
+import math
 
-
-################################## SERIAL CONNECTION ###########################
+################################## TRAJECTORY ########################################
+X = [0] # X coords
+Y = [0]	# Y coords
+# forwardCoord = "Y"  initially if we move forward we are moving in Y
+# backCoord = "Y"
+# rightCoord = "X"   # initially if we move right we are moving in X
+# leftCoord = "X"	   # initially if we move left we are moving in X
+currentAngle = 90      # facing north
+################################## IMU SERIAL CONNECTION ############################
 # Create serial connection
 ser = serial.Serial('/dev/ttyUSB0', 9600)
 # Flush initial readings
 time.sleep(5)
 ser.reset_input_buffer 
 
+
+############################# HELPER FUNCTIONS #######################################
 def dist2Ticks(dist):
 	return int((20/(np.pi*0.065)) * dist)
+
 
 def deg2Ticks(deg):
 	return int((20/(np.pi*0.065)) * (0.075*np.deg2rad(deg)))
 
-def imuAngle(direction, inputAngle, ser): # CHANGE
-	initialAngle = ser.readline() 
-	while(True):
-			if (ser.in_waiting > 0):
-				# Read serial stream
-				angle = ser.readline()     
-				
-				# Read serial stream
-				line = ser.readline()
 
-				# Strip newline and return carriage from line
-				line = line.rstrip().lstrip()
+def getIMUAngle(ser):
+	# Check if there is data in the input buffer
+	if (ser.in_waiting > 0):
+		# Read serial stream
+		angle = ser.readline()     
+		
+		# Read serial stream
+		line = ser.readline()
 
-				# Convert line to string, strip non-numeric characters and convert to float
-				line = str(line)
-				line = line.strip("'").strip("b'")
-				angle = float(line)
+		# Strip newline and return carriage from line
+		line = line.rstrip().lstrip()
 
-				direction()
+		# Convert line to string, strip non-numeric characters and convert to float
+		line = str(line)
+		line = line.strip("'").strip("b'")
+		angle = float(line)
 
-				if(angle > abs(initialAngle-inputAngle)): 
-					break;	
+		return angle
 	
-	stopDriving()
-			
-	
+	else:
+		return None
 
+def plot(X,Y):
+	plt.plot(X,Y)
 
-################################## WHEEL MOTOR CONTROL ###########################
+##################### DRIVE FUNCTIONS ###########################
 
 ## Stop
 def stopDriving():
-	pwm1.stop()
-	pwm2.stop()
-
 	# Set all motor driver pins low
 	gpio.output(31, False)
 	gpio.output(33, False)
@@ -70,7 +76,7 @@ def stopDriving():
 
 ### Directions
 def driveForward():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, True)
 	gpio.output(33, False)
@@ -80,19 +86,19 @@ def driveForward():
 	gpio.output(37, True)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 
 def driveBackward():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, False)
 	gpio.output(33, True)
@@ -102,18 +108,18 @@ def driveBackward():
 	gpio.output(37, False)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 def turnRight():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, True)
 	gpio.output(33, False)
@@ -123,18 +129,18 @@ def turnRight():
 	gpio.output(37, False)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 def turnLeft():
-	global dutyCycle, counterBR, counterFL, pwm1, pwm2
+	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, False)
 	gpio.output(33, True)
@@ -144,29 +150,32 @@ def turnLeft():
 	gpio.output(37, True)	
 
 	if (counterBR > counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
 	elif (counterBR < counterFL):
-		pwm1.ChangeDutyCycle(dutyCycle - diff)
-		pwm2.ChangeDutyCycle(dutyCycle + diff)
+		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
 	else:
-		pwm1.ChangeDutyCycle(dutyCycle)
-		pwm2.ChangeDutyCycle(dutyCycle)
+		leftPWMPin.ChangeDutyCycle(dutyCycle)
+		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
 if __name__ == '__main__':
 	##### Initialize GPIO pins ####
 	gpio.setmode(gpio.BOARD)
-	gpio.setup(31, gpio.OUT)  #IN1
-	gpio.setup(33, gpio.OUT) #IN2
-	gpio.setup(35, gpio.OUT) #IN3
-	gpio.setup(37, gpio.OUT) #IN4
+	gpio.setup(31, gpio.OUT)  	# IN1
+	gpio.setup(33, gpio.OUT) 	# IN2
+	gpio.setup(35, gpio.OUT) 	# IN3
+	gpio.setup(37, gpio.OUT) 	# IN4
+	gpio.setup(38, gpio.OUT) 	# Left motor PWM pin
+	gpio.setup(40, gpio.OUT) 	# Right motor PWM pin
 
-	pwm1 = gpio.PWM(31,50) # BackRight
-	pwm2 = gpio.PWM(37,50)
+	
+	leftPWMPin = gpio.PWM(38,50)
+	rightPWMPin = gpio.PWM(40,50) 
 
-	pwm1.start(0)
-	pwm2.start(0)
+	leftPWMPin.start(0)
+	rightPWMPin.start(0)
 
 	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) # back right encoder
 	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) # front left encoder
@@ -176,6 +185,8 @@ if __name__ == '__main__':
 
 	counterBR = np.uint64(0)
 	counterFL = np.uint64(0)
+
+	currentHeading = 0
 
 	buttonBR = int(0)
 	buttonFL = int(0)
@@ -202,8 +213,10 @@ if __name__ == '__main__':
 					counterFL += 1
 
 				driveForward()
-			
+
 			stopDriving()
+			Y.append(distance*(math.sin(math.radians(currentAngle))))
+			X.append(distance*(math.cos(math.radians(currentAngle))))
 
 		elif (driveMode == 's'):
 			distance = input('Enter distance in meters: ')
@@ -224,21 +237,45 @@ if __name__ == '__main__':
 				driveBackward()
 			
 			stopDriving()
+			Y.append(distance*(math.sin(math.radians(currentAngle))))
+			X.append(distance*(math.cos(math.radians(currentAngle))))
 
-		elif (driveMode == 'a'): #CHANGE
-			inputAngle = input('Enter angle in degrees: ') #relative angle, so subtract from initial
-			imuAngle(turnLeft, inputAngle, ser)  # passing function as argument
+		elif (driveMode == 'a'):
+			angle = input('Enter angle in degrees: ')
 
-		elif (driveMode == 'd'): #CHANGE 
-			inputAngle = input('Enter angle in degrees: ') #relative angle, so subtract from initial
-			imuAngle(turnRight, inputAngle, ser)
-					
+			currentHeading = getIMUAngle(ser)
+			desiredHeading = currentHeading - angle
+
+			while (currentHeading > desiredHeading):
+				turnLeft()
+				currentHeading = getIMUAngle(ser)
+			
+			stopDriving()
+			currentAngle = currentAngle + desiredHeading
+
+
+		elif (driveMode == 'd'):
+			angle = input('Enter angle in degrees: ')
+
+			currentHeading = getIMUAngle(ser)
+			desiredHeading = currentHeading + angle
+
+			while (currentHeading < desiredHeading):
+				turnRight()
+				currentHeading = getIMUAngle(ser)
+			
+			stopDriving()
+			currentAngle = currentAngle + desiredHeading
+
 		elif (driveMode == 'q'):
 			break
 
 		else: 
 			print("Invalid Key Pressed!")
 
+
+	leftPWMPin.stop()
+	rightPWMPin.stop()
 	stopDriving()
 	gpio.cleanup()
 
