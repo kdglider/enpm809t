@@ -10,13 +10,13 @@ import RPi.GPIO as gpio
 import serial
 import time
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import math
 import cv2
-from scipy.spatial import distance as dist
+#from scipy.spatial import distance as dist
 import imutils
 ############################## FILE TO STORE COORDINATES ##################
-f = open("demofile.txt", "a")
+#f = open("demofile.txt", "a")
 ############################## VIDEO SETTINGS #############################
 
 # Set desired video resolution, framerate and logging offset
@@ -25,8 +25,8 @@ fps = 15
 logOffset = 3 		# Skip this number of datapoints while logging
 
 # Set video codec and create video file
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter('output.mp4', fourcc, fps, resolution)
+#fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+#out = cv2.VideoWriter('output.mp4', fourcc, fps, resolution)
 
 # Create video capture object and log file
 videoCapture = cv2.VideoCapture(0)
@@ -279,7 +279,7 @@ if __name__ == '__main__':
 			if angle < 0:
 				# Turn left if angle is negative
 				currentHeading = getIMUAngle(ser)
-				desiredHeading = currentHeading - angle
+				desiredHeading = currentHeading + angle
 
 				while (currentHeading > desiredHeading):
 					turnLeft()
@@ -288,8 +288,6 @@ if __name__ == '__main__':
 				stopDriving()
 				currentAngle = currentAngle + desiredHeading 
 			else: 
-				# Turn right if angle is positive
-				angle = input('Enter angle in degrees: ')
 				currentHeading = getIMUAngle(ser)
 				desiredHeading = currentHeading + angle
 
@@ -300,6 +298,7 @@ if __name__ == '__main__':
 				stopDriving()
 				currentAngle = currentAngle + desiredHeading
 			
+			'''
 			# Move in the direction of the object
 			distance = dist.euclidean((cX_frame, cY_frame), (cX_object, cY_object))
 			ticks = dist2Ticks(float(distance))
@@ -336,6 +335,7 @@ if __name__ == '__main__':
 			# Exit if the user presses 'q'
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				break
+			'''
 
 	leftPWMPin.stop()
 	rightPWMPin.stop()
@@ -344,10 +344,10 @@ if __name__ == '__main__':
 
 	# Release video and file object handles
 	videoCapture.release()
-	out.release()
-	f.close()
+	#out.release()
+	#f.close()
 	################################# PLOT TRAJECTORY #######################
-	plt.plot(X,Y)
-	plt.show()
+	#plt.plot(X,Y)
+	#plt.show()
 	#########################################################################
 	print('Video closed')
