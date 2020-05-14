@@ -32,8 +32,8 @@ logOffset = 3 		# Skip this number of datapoints while logging
 videoCapture = cv2.VideoCapture(0)
 
 # Set HSV limits for thresholding
-minHSV = np.array([40, 20, 25])
-maxHSV = np.array([100, 180, 185])
+minHSV = np.array([106, 152, 0])
+maxHSV = np.array([117, 255, 255])
 
 ################################# CLAW OPERATION ##############################
 # Claw parameters
@@ -42,6 +42,7 @@ closePWM = 5.5
 openPWM = 9
 
 # Setup RPi GPIO pins
+gpio.cleanup()
 gpio.setmode(gpio.BOARD)
 gpio.setup(clawPin, gpio.OUT)
 claw = gpio.PWM(clawPin, 50)		# Set PWM to 50 Hz
@@ -66,7 +67,7 @@ currentAngle = 90      # facing north
 ser = serial.Serial('/dev/ttyUSB0', 9600)
 # Flush initial readings
 time.sleep(5)
-ser.reset_input_buffer 
+ser.reset_input_buffer()
 
 
 ############################# HELPER FUNCTIONS #######################################
@@ -240,22 +241,38 @@ if __name__ == '__main__':
 		if ret == True:
 			# Flip the frame both horizontally and vertically
 			image = cv2.flip(image, -1)
+
+			'''
 			# Start with open sequence
 			for i in range(len(fullSequence)):
 				clawDutyCycle = openSequence[i]
 				claw.ChangeDutyCycle(clawDutyCycle)
 				time.sleep(2)
+			'''
+
 			# Convert to HSV and perform thresholding for green objects
 			imageHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 			blackMask = cv2.inRange(imageHSV, minHSV, maxHSV)
 
-			gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-			gray = cv2.GaussianBlur(gray, (7, 7), 0)
+			cv2.imshow('Threshold', blackMask)
+			cv2.waitKey(0)
+
+			#gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+			#gray = cv2.GaussianBlur(blackMask, (7, 7), 0)
+			thresh = cv2.erode(blackMask, None, iterations=3)
+			thresh = cv2.dilate(thresh, None, iterations=1)
+			ret, thresh = cv2.threshold(thresh,230,255,cv2.THRESH_BINARY)
+			
 			# perform edge detection, then perform a dilation + erosion to
 			# close gaps in between object edges
-			edged = cv2.Canny(gray, 50, 100)
-			thresh = cv2.dilate(edged, None, iterations=1)
-			thresh = cv2.erode(thresh, None, iterations=1)
+			#edged = cv2.Canny(thresh, 50, 100)
+			
+
+			cv2.imshow('Threshold', thresh)
+			cv2.waitKey(0)
+			# Exit if the user presses 'q'
+			#if cv2.waitKey(1) & 0xFF == ord('q'):
+				#break
 
 
 			# Draw contours around detected object
@@ -274,11 +291,17 @@ if __name__ == '__main__':
 				# draw the contour and center of the shape on the image
 				cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 				cv2.circle(image, (cX_object, cY_object), 7, (255, 255, 255), -1)
+
+			cv2.imshow('Threshold', image)
+			cv2.waitKey(0)
 			
 			angle = (cX_frame - cX_object)*0.061
+			print(angle)
 			if angle < 0:
 				# Turn left if angle is negative
 				currentHeading = getIMUAngle(ser)
+				if (currentHeading == None):
+					continue
 				desiredHeading = currentHeading + angle
 
 				while (currentHeading > desiredHeading):
@@ -289,6 +312,8 @@ if __name__ == '__main__':
 				currentAngle = currentAngle + desiredHeading 
 			else: 
 				currentHeading = getIMUAngle(ser)
+				if (currentHeading == None):
+					continue
 				desiredHeading = currentHeading + angle
 
 				while (currentHeading < desiredHeading):
