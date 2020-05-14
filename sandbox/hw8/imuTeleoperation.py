@@ -25,25 +25,24 @@ def deg2Ticks(deg):
 
 def getIMUAngle():
 	global ser
-	# Check if there is data in the input buffer
-	if (ser.in_waiting > 0):
-		# Read serial stream
-		line = ser.readline()
-		print(line)
+	ser.reset_input_buffer()
+	while (ser.in_waiting == 0):
+		continue
 
-		# Strip newline and return carriage from line
-		line = line.rstrip().lstrip()
+	# Read serial stream
+	line = ser.readline()
+	#print(line)
 
-		# Convert line to string, strip non-numeric characters and convert to float
-		line = str(line)
-		line = line.strip("'").strip("b'")
-		print(line)
-		angle = float(line)
+	# Strip newline and return carriage from line
+	line = line.rstrip().lstrip()
 
-		return angle
-	
-	else:
-		return None
+	# Convert line to string, strip non-numeric characters and convert to float
+	line = str(line)
+	line = line.strip("'").strip("b'")
+	print(line)
+	angle = float(line)
+
+	return angle
 
 
 ##################### DRIVE FUNCTIONS ###########################
@@ -102,7 +101,7 @@ def driveBackward():
 
 
 def turnRight(turnAngle):
-	global dutyCycle, leftPWMPin, rightPWMPin
+	global dutyCycle, leftPWMPin, rightPWMPin, ser
 	#Left wheels
 	gpio.output(31, True)
 	gpio.output(33, False)
@@ -110,11 +109,9 @@ def turnRight(turnAngle):
 	# Right Wheels
 	gpio.output(35, True)
 	gpio.output(37, False)	
-
+	
 	currentHeading = getIMUAngle()
 	previousHeading = currentHeading
-	if (currentHeading == None):
-		return None
 
 	desiredHeading = currentHeading + turnAngle
 
@@ -125,11 +122,13 @@ def turnRight(turnAngle):
 			currentHeading = getIMUAngle()
 	
 	else:
-		while (currentHeading >= previousHeading):
+		while (currentHeading < 360):
 			leftPWMPin.ChangeDutyCycle(dutyCycle)
 			rightPWMPin.ChangeDutyCycle(dutyCycle)
 			previousHeading = currentHeading
 			currentHeading = getIMUAngle()
+			if (currentHeading < previousHeading):
+				break
 		while (currentHeading < desiredHeading - 360):
 			leftPWMPin.ChangeDutyCycle(dutyCycle)
 			rightPWMPin.ChangeDutyCycle(dutyCycle)
@@ -156,19 +155,21 @@ def turnLeft(turnAngle):
 
 	desiredHeading = currentHeading - turnAngle
 
-	if (desiredHeading < 0):
+	if (desiredHeading > 0):
 		while (currentHeading > desiredHeading):
 			leftPWMPin.ChangeDutyCycle(dutyCycle)
 			rightPWMPin.ChangeDutyCycle(dutyCycle)
 			currentHeading = getIMUAngle()
 	
 	else:
-		while (currentHeading <= previousHeading):
+		while (currentHeading > 0):
 			leftPWMPin.ChangeDutyCycle(dutyCycle)
 			rightPWMPin.ChangeDutyCycle(dutyCycle)
 			previousHeading = currentHeading
 			currentHeading = getIMUAngle()
-		while (currentHeading > desiredHeading):
+			if (currentHeading > previousHeading):
+				break
+		while (currentHeading > desiredHeading + 360):
 			leftPWMPin.ChangeDutyCycle(dutyCycle)
 			rightPWMPin.ChangeDutyCycle(dutyCycle)
 			currentHeading = getIMUAngle()
@@ -212,7 +213,7 @@ if __name__ == '__main__':
 	counterBR = np.uint64(0)
 	counterFL = np.uint64(0)
 
-	currentHeading = 0
+	#currentHeading = 0
 
 	buttonBR = int(0)
 	buttonFL = int(0)
