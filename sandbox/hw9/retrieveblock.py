@@ -47,38 +47,10 @@ msg['To'] = toAdd
 msg.preamble = "Image recorded at "+ pic_time
 '''
 
-############################## FILE TO STORE COORDINATES ##################
-#f = open("demofile.txt", "a")
-
-############################## VIDEO SETTINGS #############################
-
-# Set desired video resolution, framerate and logging offset
-resolution = (1280,720)
-fps = 15
-
-# Create video capture object 
-videoCapture = cv2.VideoCapture(0)
-videoCapture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-# Set HSV limits for thresholding
-minHSV = np.array([100, 152, 0])
-maxHSV = np.array([125, 255, 255])
-
-################################# CLAW OPERATION ##############################
-# Claw parameters
-clawPin = 36
-closePWM = 5.5
-openPWM = 9
-
-# Setup RPi GPIO pins
-gpio.setmode(gpio.BOARD)
-gpio.setup(clawPin, gpio.OUT)
-claw = gpio.PWM(clawPin, 50)		# Set PWM to 50 Hz
-
-# Start claw in closed position
-claw.start(closePWM)
-
 '''
+############################## FILE TO STORE COORDINATES ##################
+f = open("demofile.txt", "a")
+
 ################################## TRAJECTORY ########################################
 X = [0] # X coords
 Y = [0]	# Y coords
@@ -88,14 +60,6 @@ Y = [0]	# Y coords
 # leftCoord = "X"	   # initially if we move left we are moving in X
 currentAngle = 90      # facing north
 '''
-
-############################### IMU SERIAL CONNECTION ############################
-# Create serial connection
-ser = serial.Serial('/dev/ttyUSB0', 9600)
-# Flush initial readings
-time.sleep(5)
-ser.reset_input_buffer()
-
 
 ############################# HELPER FUNCTIONS #######################################
 def dist2Ticks(dist):
@@ -129,6 +93,51 @@ def getIMUAngle():
 	return angle
 
 
+def getObjectLocation(image):
+	sensorSizeY = 2.76	# mm
+	sensorResY = 2464	# px
+	focalLength = 3.04	# mm
+	pixPerMil = sensorResY / sensorSizeY	# px/mm
+	objectHeight = 2.5	# cm
+
+	minHSV = np.array([100, 152, 0])
+	maxHSV = np.array([125, 255, 255])
+
+	imageHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+	blackMask = cv2.inRange(imageHSV, minHSV, maxHSV)
+
+	thresh = cv2.erode(blackMask, None, iterations=3)
+	thresh = cv2.dilate(thresh, None, iterations=1)
+	ret, thresh = cv2.threshold(thresh, 230, 255, cv2.THRESH_BINARY)
+
+	x, y, w, h = cv2.boundingRect(thresh)
+
+	# Draw contours around detected object
+	cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+	cnts = imutils.grab_contours(cnts)
+	cX_object = 0
+	cY_object = 0
+	cX_frame = int(640/2) # verify if this needs switching
+	cY_frame = int(480/2) # verify if this needs switching
+
+	angle = (cX_object - cX_frame) * 0.061
+	distance = objectHeight * focalLength * pixPerMil / h
+
+	for c in cnts:
+		# compute the center of the contour
+		M = cv2.moments(c)
+		cX_object = int(M["m10"] / M["m00"])
+		cY_object = int(M["m01"] / M["m00"])
+		# draw the contour and center of the shape on the image
+		cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
+		cv2.circle(image, (cX_object, cY_object), 7, (255, 255, 255), -1)
+	
+	cv2.putText(image, 'Distance: ' + str(distance) + 'cm', (10,30), \
+				cv2.FONT_HERSHEY_SIMPLEX, 1, \
+				color=(0,0,255), thickness=3)
+
+	return angle, distance, image
+
 ##################### DRIVE FUNCTIONS ###########################
 ## Stop
 def stopDriving():
@@ -141,15 +150,35 @@ def stopDriving():
 
 ### Directions
 def driveForward(distance):
-	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
+	global dutyCycle, diff, leftPWMPin, rightPWMPin
 
-	# Move in the direction of the object
-	distance = dist.euclidean((cX_frame, cY_frame), (cX_object, cY_object))
-	ticks = dist2Ticks(float(distance))
+	ticks = dist2Ticks(distance)
 	counterBR = 0
 	counterFL = 0
+	buttonBR = int(0)
+	buttonFL = int(0)
+
+	#Left wheels
+	gpio.output(31, True)
+	gpio.output(33, False)
+
+	# Right Wheels
+	gpio.output(35, False)
+	gpio.output(37, True)
 
 	while (counterBR < ticks or counterFL < ticks):
+		# Move in the direction of the object
+		if (counterBR > counterFL):
+			leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+			rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		elif (counterBR < counterFL):
+			leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+			rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		else:
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+		
+		# Update encoder states
 		if (gpio.input(12) != buttonBR):
 			buttonBR = int(gpio.input(12)) #holds the state
 			counterBR += 1
@@ -157,27 +186,19 @@ def driveForward(distance):
 		if (gpio.input(7) != buttonFL):
 			buttonFL = int(gpio.input(7)) #holds the state
 			counterFL += 1
-	#Left wheels
-	gpio.output(31, True)
-	gpio.output(33, False)
-
-	# Right Wheels
-	gpio.output(35, False)
-	gpio.output(37, True)	
-
-	if (counterBR > counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
-	elif (counterBR < counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
-	else:
-		leftPWMPin.ChangeDutyCycle(dutyCycle)
-		rightPWMPin.ChangeDutyCycle(dutyCycle)
+	
+	stopDriving()
 
 
 def driveBackward(distance):
-	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
+	global dutyCycle, diff, leftPWMPin, rightPWMPin
+
+	ticks = dist2Ticks(distance)
+	counterBR = 0
+	counterFL = 0
+	buttonBR = int(0)
+	buttonFL = int(0)
+
 	#Left wheels
 	gpio.output(31, False)
 	gpio.output(33, True)
@@ -186,15 +207,28 @@ def driveBackward(distance):
 	gpio.output(35, True)
 	gpio.output(37, False)	
 
-	if (counterBR > counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
-	elif (counterBR < counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
-	else:
-		leftPWMPin.ChangeDutyCycle(dutyCycle)
-		rightPWMPin.ChangeDutyCycle(dutyCycle)
+	while (counterBR < ticks or counterFL < ticks):
+		# Move in the direction of the object
+		if (counterBR > counterFL):
+			leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
+			rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
+		elif (counterBR < counterFL):
+			leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
+			rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
+		else:
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+		
+		# Update encoder states
+		if (gpio.input(12) != buttonBR):
+			buttonBR = int(gpio.input(12)) #holds the state
+			counterBR += 1
+
+		if (gpio.input(7) != buttonFL):
+			buttonFL = int(gpio.input(7)) #holds the state
+			counterFL += 1
+	
+	stopDriving()
 
 
 def turnRight(turnAngle):
@@ -282,7 +316,6 @@ if __name__ == '__main__':
 	gpio.setup(37, gpio.OUT) 	# IN4
 	gpio.setup(38, gpio.OUT) 	# Left motor PWM pin
 	gpio.setup(40, gpio.OUT) 	# Right motor PWM pin
-
 	
 	leftPWMPin = gpio.PWM(38,50)
 	rightPWMPin = gpio.PWM(40,50) 
@@ -290,126 +323,103 @@ if __name__ == '__main__':
 	leftPWMPin.start(0)
 	rightPWMPin.start(0)
 
-	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) # back right encoder
-	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) # front left encoder
+	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) 	# Back right encoder
+	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) 		# Front left encoder
 
 	dutyCycle = 15
 	diff = 5
 
-	counterBR = np.uint64(0)
-	counterFL = np.uint64(0)
+	################################# CLAW OPERATION ##############################
+	# Claw parameters
+	clawPin = 36
+	closePWM = 5.5
+	openPWM = 9
 
-	currentHeading = 0
+	# Setup RPi GPIO pins
+	gpio.setup(clawPin, gpio.OUT)
+	claw = gpio.PWM(clawPin, 50)		# Set PWM to 50 Hz
 
-	buttonBR = int(0)
-	buttonFL = int(0)
+	# Start claw in open position
+	claw.start(openPWM)
+
+	############################### IMU SERIAL CONNECTION ############################
+	# Create serial connection
+	ser = serial.Serial('/dev/ttyUSB0', 9600)
+	# Flush initial readings
+	time.sleep(5)
+	ser.reset_input_buffer()
+
+	############################## VIDEO SETTINGS #############################
+
+	# Set desired video resolution, framerate and logging offset
+	resolution = (1280,720)
+	fps = 15
+
+	# Create video capture object 
+	videoCapture = cv2.VideoCapture(0)
+	videoCapture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+	# Set HSV limits for thresholding
+	minHSV = np.array([100, 152, 0])
+	maxHSV = np.array([125, 255, 255])
 
 	stopDriving()
 
-	while(videoCapture.isOpened()):
-		ret, image = videoCapture.read()
-		if ret == True:
+	while (True):
+
+		retrieveCommand = input('Retrieve next object (Enter Y or N)? ')
+
+		if (retrieveCommand == 'Y'):
+			ret, image = videoCapture.read()
+			ret, image = videoCapture.read()
+			ret, image = videoCapture.read()
+
 			# Flip the frame both horizontally and vertically
 			image = cv2.flip(image, -1)
-			# Start with open sequence
-			for i in range(len(fullSequence)):
-				clawDutyCycle = openSequence[i]
-				claw.ChangeDutyCycle(clawDutyCycle)
-				time.sleep(2)
-			# Convert to HSV and perform thresholding for green objects
-			imageHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-			blackMask = cv2.inRange(imageHSV, minHSV, maxHSV)
 
-			gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-			gray = cv2.GaussianBlur(gray, (7, 7), 0)
-			# perform edge detection, then perform a dilation + erosion to
-			# close gaps in between object edges
-			edged = cv2.Canny(gray, 50, 100)
-			thresh = cv2.dilate(edged, None, iterations=1)
-			thresh = cv2.erode(thresh, None, iterations=1)
+			angle, distanceCM, newImage = getObjectLocation(image)
 
-
-			# Draw contours around detected object
-			cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-			cnts = imutils.grab_contours(cnts)
-			cX_object = 0
-			cY_object = 0
-			cX_frame = int(640/2) # verify if this needs switching
-			cY_frame = int(480/2) # verify if this needs switching
-
-			for c in cnts:
-				# compute the center of the contour
-				M = cv2.moments(c)
-				cX_object = int(M["m10"] / M["m00"])
-				cY_object = int(M["m01"] / M["m00"])
-				# draw the contour and center of the shape on the image
-				cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
-				cv2.circle(image, (cX_object, cY_object), 7, (255, 255, 255), -1)
-			
-			angle = (cX_frame - cX_object)*0.061
-			if angle < 0:
-				# Turn left if angle is negative
-				currentHeading = getIMUAngle(ser)
-				desiredHeading = currentHeading - angle
-
-				while (currentHeading > desiredHeading):
-					turnLeft()
-					currentHeading = getIMUAngle(ser)
-				
-				stopDriving()
-				currentAngle = currentAngle + desiredHeading 
-			else: 
-				# Turn right if angle is positive
-				angle = input('Enter angle in degrees: ')
-				currentHeading = getIMUAngle(ser)
-				desiredHeading = currentHeading + angle
-
-				while (currentHeading < desiredHeading):
-					turnRight()
-					currentHeading = getIMUAngle(ser)
-				
-				stopDriving()
-				currentAngle = currentAngle + desiredHeading
-			
-			
-
-				driveForward()
-
-			stopDriving()
-
-			realDistance = ticks2dist((counterBR + counterFL)/2)
-			y_val = realDistance*(math.sin(math.radians(currentAngle)))
-			x_val = realDistance*(math.cos(math.radians(currentAngle))) 
-			Y.append(y_val)
-			X.append(x_val)
-
-			# End with close sequence
-			for i in range(len(fullSequence)):
-				clawDutyCycle = closeSequence[i]
-				claw.ChangeDutyCycle(clawDutyCycle)
-				time.sleep(2)
-
-			f.write(str(x_val)+" "+str(y_val))
-
+			cv2.imshow('Threshold', newImage)
 			# Exit if the user presses 'q'
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				break
+			
+			print(angle)
 
+			# Turn toward object
+			while(abs(angle) < 2):
+				if angle < 0:
+					# Turn left if angle is negative
+					turnLeft(-angle)
+				else: 
+					turnRight(angle)
+			
+			# Drive to object, pick it up and drive back
+			driveForward((distanceCM - 10)/100)
+
+			claw.ChangeDutyCycle(closePWM)
+
+			driveBackward((distanceCM - 10)/100)
+
+		else:
+			break
+
+		'''
+		realDistance = ticks2dist((counterBR + counterFL)/2)
+		y_val = realDistance*(math.sin(math.radians(currentAngle)))
+		x_val = realDistance*(math.cos(math.radians(currentAngle))) 
+		Y.append(y_val)
+		X.append(x_val)
+		f.write(str(x_val)+" "+str(y_val))
+		'''
+			
 	leftPWMPin.stop()
 	rightPWMPin.stop()
+	claw.stop()
 	stopDriving()
 	gpio.cleanup()
 
 	# Release video and file object handles
 	videoCapture.release()
-	out.release()
-	################################ ATTACH FILE ############################
-	body = MIMEText(f.read())
-	msg.attach(body)
-	################################# FILE OPERATIONS ########################
-	f.close()
-	################################# PLOT TRAJECTORY #######################
-	plt.plot(X,Y)
-	plt.show()
-	#########################################################################
-	print('Video closed')
+
+	print('Video object handle closed')
