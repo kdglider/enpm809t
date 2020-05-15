@@ -1,8 +1,8 @@
 '''
 Copyright (c) 2020 Hao Da (Kevin) Dong, Krithika Govindaraj
-@file       imuTeleoperation.py
-@date       2020/05/01
-@brief      Teleoperation of the Baron, using both encoders and IMU for localization
+@file       retrieveblock.py
+@date       2020/05/15
+@brief      Autonomous object recognition and retrieval with Baron robot
 @license    This project is released under the BSD-3-Clause license.
 '''
 
@@ -10,10 +10,8 @@ import RPi.GPIO as gpio
 import serial
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 import math
 import cv2
-from scipy.spatial import distance as dist
 import imutils
 
 ############################## EMAIL SETUP ################################
@@ -27,6 +25,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
+'''
 #Define time stamp and record an image
 pic_time = datetime.now().strftime('%Y%m%d%H%M%S')
 command = 'raspistill -w 1280 -h 720 -vf -hf -o '+ pic_time +'.jpg' 
@@ -40,32 +39,30 @@ smtpPass = 'your pass'
 toAdd = ['krithideepu@gmail.com', 'your email'] #Add these email after code works 
 # ENPM809TS19@gmail.com, skotasai@umd.edu
 fromAdd = smtpUser 
-subject = 'Image recorded at '+pic_time
+subject = 'Image recorded at '+ pic_time
 msg = MIMEMultipart()
 msg['Subject'] = subject
 msg['From'] = fromAdd
 msg['To'] = toAdd
-msg.preamble = "Image recorded at "+pic_time
+msg.preamble = "Image recorded at "+ pic_time
+'''
 
 ############################## FILE TO STORE COORDINATES ##################
-f = open("demofile.txt", "a")
+#f = open("demofile.txt", "a")
+
 ############################## VIDEO SETTINGS #############################
 
 # Set desired video resolution, framerate and logging offset
 resolution = (1280,720)
 fps = 15
-logOffset = 3 		# Skip this number of datapoints while logging
 
-# Set video codec and create video file
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter('output.mp4', fourcc, fps, resolution)
-
-# Create video capture object and log file
+# Create video capture object 
 videoCapture = cv2.VideoCapture(0)
+videoCapture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
 # Set HSV limits for thresholding
-minHSV = np.array([40, 20, 25])
-maxHSV = np.array([100, 180, 185])
+minHSV = np.array([100, 152, 0])
+maxHSV = np.array([125, 255, 255])
 
 ################################# CLAW OPERATION ##############################
 # Claw parameters
@@ -81,10 +78,7 @@ claw = gpio.PWM(clawPin, 50)		# Set PWM to 50 Hz
 # Start claw in closed position
 claw.start(closePWM)
 
-# Create claw PWM duty cycle sequence
-openSequence = np.arange(closePWM, openPWM+0.5, 0.5)
-closeSequence = np.flip(openSequence)
-fullSequence = np.hstack((openSequence, closeSequence))
+'''
 ################################## TRAJECTORY ########################################
 X = [0] # X coords
 Y = [0]	# Y coords
@@ -93,18 +87,19 @@ Y = [0]	# Y coords
 # rightCoord = "X"   # initially if we move right we are moving in X
 # leftCoord = "X"	   # initially if we move left we are moving in X
 currentAngle = 90      # facing north
-################################## IMU SERIAL CONNECTION ############################
+'''
+
+############################### IMU SERIAL CONNECTION ############################
 # Create serial connection
 ser = serial.Serial('/dev/ttyUSB0', 9600)
 # Flush initial readings
 time.sleep(5)
-ser.reset_input_buffer 
+ser.reset_input_buffer()
 
 
 ############################# HELPER FUNCTIONS #######################################
 def dist2Ticks(dist):
 	return int((20/(np.pi*0.065)) * dist)
-
 
 def deg2Ticks(deg):
 	return int((20/(np.pi*0.065)) * (0.075*np.deg2rad(deg)))
@@ -112,33 +107,29 @@ def deg2Ticks(deg):
 def ticks2dist(ticks):
 	return int(((np.pi*0.065)/20) * ticks)
 
-def getIMUAngle(ser):
-	# Check if there is data in the input buffer
-	if (ser.in_waiting > 0):
-		# Read serial stream
-		angle = ser.readline()     
-		
-		# Read serial stream
-		line = ser.readline()
+def getIMUAngle():
+	global ser
+	ser.reset_input_buffer()
+	while (ser.in_waiting == 0):
+		continue
 
-		# Strip newline and return carriage from line
-		line = line.rstrip().lstrip()
+	# Read serial stream
+	line = ser.readline()
+	#print(line)
 
-		# Convert line to string, strip non-numeric characters and convert to float
-		line = str(line)
-		line = line.strip("'").strip("b'")
-		angle = float(line)
+	# Strip newline and return carriage from line
+	line = line.rstrip().lstrip()
 
-		return angle
-	
-	else:
-		return None
+	# Convert line to string, strip non-numeric characters and convert to float
+	line = str(line)
+	line = line.strip("'").strip("b'")
+	print(line)
+	angle = float(line)
 
-def plot(X,Y):
-	plt.plot(X,Y)
+	return angle
+
 
 ##################### DRIVE FUNCTIONS ###########################
-
 ## Stop
 def stopDriving():
 	# Set all motor driver pins low
@@ -149,8 +140,23 @@ def stopDriving():
 
 
 ### Directions
-def driveForward():
+def driveForward(distance):
 	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
+
+	# Move in the direction of the object
+	distance = dist.euclidean((cX_frame, cY_frame), (cX_object, cY_object))
+	ticks = dist2Ticks(float(distance))
+	counterBR = 0
+	counterFL = 0
+
+	while (counterBR < ticks or counterFL < ticks):
+		if (gpio.input(12) != buttonBR):
+			buttonBR = int(gpio.input(12)) #holds the state
+			counterBR += 1
+
+		if (gpio.input(7) != buttonFL):
+			buttonFL = int(gpio.input(7)) #holds the state
+			counterFL += 1
 	#Left wheels
 	gpio.output(31, True)
 	gpio.output(33, False)
@@ -170,8 +176,7 @@ def driveForward():
 		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
-
-def driveBackward():
+def driveBackward(distance):
 	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, False)
@@ -192,8 +197,8 @@ def driveBackward():
 		rightPWMPin.ChangeDutyCycle(dutyCycle)
 
 
-def turnRight():
-	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
+def turnRight(turnAngle):
+	global dutyCycle, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, True)
 	gpio.output(33, False)
@@ -201,19 +206,35 @@ def turnRight():
 	# Right Wheels
 	gpio.output(35, True)
 	gpio.output(37, False)	
+	
+	currentHeading = getIMUAngle()
+	previousHeading = currentHeading
 
-	if (counterBR > counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
-	elif (counterBR < counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
+	desiredHeading = currentHeading + turnAngle
+
+	if (desiredHeading < 360):
+		while (currentHeading < desiredHeading):
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+			currentHeading = getIMUAngle()
+	
 	else:
-		leftPWMPin.ChangeDutyCycle(dutyCycle)
-		rightPWMPin.ChangeDutyCycle(dutyCycle)
+		while (currentHeading < 360):
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+			previousHeading = currentHeading
+			currentHeading = getIMUAngle()
+			if (currentHeading < previousHeading):
+				break
+		while (currentHeading < desiredHeading - 360):
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+			currentHeading = getIMUAngle()
+	
+	stopDriving()
 
 
-def turnLeft():
+def turnLeft(turnAngle):
 	global dutyCycle, counterBR, counterFL, leftPWMPin, rightPWMPin
 	#Left wheels
 	gpio.output(31, False)
@@ -223,15 +244,33 @@ def turnLeft():
 	gpio.output(35, False)
 	gpio.output(37, True)	
 
-	if (counterBR > counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle + diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle - diff)
-	elif (counterBR < counterFL):
-		leftPWMPin.ChangeDutyCycle(dutyCycle - diff)
-		rightPWMPin.ChangeDutyCycle(dutyCycle + diff)
+	currentHeading = getIMUAngle()
+	previousHeading = currentHeading
+	if (currentHeading == None):
+		return None
+
+	desiredHeading = currentHeading - turnAngle
+
+	if (desiredHeading > 0):
+		while (currentHeading > desiredHeading):
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+			currentHeading = getIMUAngle()
+	
 	else:
-		leftPWMPin.ChangeDutyCycle(dutyCycle)
-		rightPWMPin.ChangeDutyCycle(dutyCycle)
+		while (currentHeading > 0):
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+			previousHeading = currentHeading
+			currentHeading = getIMUAngle()
+			if (currentHeading > previousHeading):
+				break
+		while (currentHeading > desiredHeading + 360):
+			leftPWMPin.ChangeDutyCycle(dutyCycle)
+			rightPWMPin.ChangeDutyCycle(dutyCycle)
+			currentHeading = getIMUAngle()
+	
+	stopDriving()
 
 
 if __name__ == '__main__':
@@ -332,20 +371,7 @@ if __name__ == '__main__':
 				stopDriving()
 				currentAngle = currentAngle + desiredHeading
 			
-			# Move in the direction of the object
-			distance = dist.euclidean((cX_frame, cY_frame), (cX_object, cY_object))
-			ticks = dist2Ticks(float(distance))
-			counterBR = 0
-			counterFL = 0
-
-			while (counterBR < ticks or counterFL < ticks):
-				if (gpio.input(12) != buttonBR):
-					buttonBR = int(gpio.input(12)) #holds the state
-					counterBR += 1
-
-				if (gpio.input(7) != buttonFL):
-					buttonFL = int(gpio.input(7)) #holds the state
-					counterFL += 1
+			
 
 				driveForward()
 

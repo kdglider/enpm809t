@@ -1,8 +1,8 @@
 '''
 Copyright (c) 2020 Hao Da (Kevin) Dong, Krithika Govindaraj
-@file       imuTeleoperation.py
-@date       2020/05/01
-@brief      Teleoperation of the Baron, using both encoders and IMU for localization
+@file       trackblock.py
+@date       2020/05/14
+@brief      Baron robot autonomous object tracking via rotation
 @license    This project is released under the BSD-3-Clause license.
 '''
 
@@ -41,7 +41,6 @@ ser.reset_input_buffer()
 def dist2Ticks(dist):
 	return int((20/(np.pi*0.065)) * dist)
 
-
 def deg2Ticks(deg):
 	return int((20/(np.pi*0.065)) * (0.075*np.deg2rad(deg)))
 
@@ -70,7 +69,6 @@ def getIMUAngle():
 	return angle
 
 ##################### DRIVE FUNCTIONS ###########################
-
 ## Stop
 def stopDriving():
 	# Set all motor driver pins low

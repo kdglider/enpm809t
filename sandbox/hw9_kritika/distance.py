@@ -1,11 +1,8 @@
-# import the necessary packages
-from imutils import paths
 import numpy as np
 import imutils
 import cv2
 
-imagePath = ""
-
+'''
 def find_marker(image):
 	# convert the image to grayscale, blur it, and detect edges
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -38,18 +35,57 @@ def getFocalLength():
 	marker = find_marker(image)
 	focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
 	return focalLength
+'''
 
-# load the image, find the marker in the image, then compute the
-# distance to the marker from the camera
-image = cv2.imread(imagePath)
-marker = find_marker(image)
-inches = distance_to_camera(KNOWN_WIDTH, focalLength, marker[1][0])
-# draw a bounding box around the image and display it
-box = cv2.cv.BoxPoints(marker) if imutils.is_cv2() else cv2.boxPoints(marker)
-box = np.int0(box)
-cv2.drawContours(image, [box], -1, (0, 255, 0), 2)
-cv2.putText(image, "%.2fft" % (inches / 12),
-	(image.shape[1] - 200, image.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX,
-	2.0, (0, 255, 0), 3)
-cv2.imshow("image", image)
-cv2.waitKey(0)
+
+if __name__ == '__main__':
+	## Raspberry Pi Camera v2 Specifications
+	# Resolution: 	3280 × 2464
+	# Sensor Size: 	3.68 x 2.76 mm
+	# Focal Length: 3.04 mm
+
+	sensorSizeY = 2.76	# mm
+	sensorResY = 2464	# px
+	focalLength = 3.04	# mm
+	pixPerMil = sensorResY / sensorSizeY	# px/mm
+	objectHeight = 2.5	# cm
+
+	imagePath = '../../image4.jpg'
+
+	minHSV = np.array([100, 152, 0])
+	maxHSV = np.array([125, 255, 255])
+
+	image = cv2.imread(imagePath)
+	imageHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+	blackMask = cv2.inRange(imageHSV, minHSV, maxHSV)
+
+	thresh = cv2.erode(blackMask, None, iterations=3)
+	thresh = cv2.dilate(thresh, None, iterations=1)
+	ret, thresh = cv2.threshold(thresh, 230, 255, cv2.THRESH_BINARY)
+
+	x, y, w, h = cv2.boundingRect(thresh)
+
+	# Draw contours around detected object
+	cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+	cnts = imutils.grab_contours(cnts)
+	cX_object = 0
+	cY_object = 0
+	cX_frame = int(640/2) # verify if this needs switching
+	cY_frame = int(480/2) # verify if this needs switching
+
+	for c in cnts:
+		# compute the center of the contour
+		M = cv2.moments(c)
+		cX_object = int(M["m10"] / M["m00"])
+		cY_object = int(M["m01"] / M["m00"])
+		# draw the contour and center of the shape on the image
+		cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
+		cv2.circle(image, (cX_object, cY_object), 7, (255, 255, 255), -1)
+
+	print('Distance: ' + str(objectHeight * focalLength * pixPerMil / h) + 'cm')
+
+	cv2.imshow("image", image)
+	cv2.waitKey(0)
+
+
+
