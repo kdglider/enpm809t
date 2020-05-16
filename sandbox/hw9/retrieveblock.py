@@ -87,7 +87,7 @@ def getIMUAngle():
 	# Convert line to string, strip non-numeric characters and convert to float
 	line = str(line)
 	line = line.strip("'").strip("b'")
-	print(line)
+	#print(line)
 	angle = float(line)
 
 	return angle
@@ -95,22 +95,33 @@ def getIMUAngle():
 
 def getObjectLocation(image):
 	sensorSizeY = 2.76	# mm
-	sensorResY = 2464	# px
+	sensorResY = 900	# px
 	focalLength = 3.04	# mm
 	pixPerMil = sensorResY / sensorSizeY	# px/mm
-	objectHeight = 2.5	# cm
+	objectHeight = 3.5	# cm
 
-	minHSV = np.array([100, 152, 0])
+	# Set HSV limits for thresholding
+	minHSV = np.array([100, 100, 0])
 	maxHSV = np.array([125, 255, 255])
+	#minHSV = np.array([0, 0, 0])
+	#maxHSV = np.array([255, 170, 50])
 
 	imageHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 	blackMask = cv2.inRange(imageHSV, minHSV, maxHSV)
 
 	thresh = cv2.erode(blackMask, None, iterations=3)
-	thresh = cv2.dilate(thresh, None, iterations=1)
-	ret, thresh = cv2.threshold(thresh, 230, 255, cv2.THRESH_BINARY)
+	thresh2 = cv2.dilate(thresh, None, iterations=1)
+	ret, thresh3 = cv2.threshold(thresh2, 230, 255, cv2.THRESH_BINARY)
+	
+	
+	#cv2.imshow('a', image)
+	#cv2.imshow('1', thresh)
+	#cv2.imshow('2', thresh2)
+	#cv2.imshow('3', thresh3)
+	#cv2.waitKey(0)
+	
 
-	x, y, w, h = cv2.boundingRect(thresh)
+	x, y, w, h = cv2.boundingRect(thresh3)
 
 	# Draw contours around detected object
 	cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
@@ -120,8 +131,9 @@ def getObjectLocation(image):
 	cX_frame = int(640/2) # verify if this needs switching
 	cY_frame = int(480/2) # verify if this needs switching
 
-	angle = (cX_object - cX_frame) * 0.061
-	distance = objectHeight * focalLength * pixPerMil / h
+	if (h == 0):
+		print('No object detected')
+		return None, None, None
 
 	for c in cnts:
 		# compute the center of the contour
@@ -131,6 +143,9 @@ def getObjectLocation(image):
 		# draw the contour and center of the shape on the image
 		cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 		cv2.circle(image, (cX_object, cY_object), 7, (255, 255, 255), -1)
+
+	angle = (cX_object - cX_frame) * 0.061
+	distance = objectHeight * focalLength * pixPerMil / h
 	
 	cv2.putText(image, 'Distance: ' + str(distance) + 'cm', (10,30), \
 				cv2.FONT_HERSHEY_SIMPLEX, 1, \
@@ -326,8 +341,8 @@ if __name__ == '__main__':
 	gpio.setup(12, gpio.IN, pull_up_down = gpio.PUD_UP) 	# Back right encoder
 	gpio.setup(7, gpio.IN, pull_up_down = gpio.PUD_UP) 		# Front left encoder
 
-	dutyCycle = 15
-	diff = 5
+	dutyCycle = 70
+	diff = 10
 
 	################################# CLAW OPERATION ##############################
 	# Claw parameters
@@ -369,15 +384,19 @@ if __name__ == '__main__':
 
 		retrieveCommand = input('Retrieve next object (Enter Y or N)? ')
 
-		if (retrieveCommand == 'Y'):
+		if (retrieveCommand == 'Y' or retrieveCommand == 'y'):
 			ret, image = videoCapture.read()
 			ret, image = videoCapture.read()
 			ret, image = videoCapture.read()
 
 			# Flip the frame both horizontally and vertically
 			image = cv2.flip(image, -1)
+			print(image.shape)
 
 			angle, distanceCM, newImage = getObjectLocation(image)
+
+			if (angle == None):
+				continue
 
 			cv2.imshow('Threshold', newImage)
 			# Exit if the user presses 'q'
@@ -387,7 +406,7 @@ if __name__ == '__main__':
 			print(angle)
 
 			# Turn toward object
-			while(abs(angle) < 2):
+			if (abs(angle) > 2):
 				if angle < 0:
 					# Turn left if angle is negative
 					turnLeft(-angle)
@@ -395,11 +414,14 @@ if __name__ == '__main__':
 					turnRight(angle)
 			
 			# Drive to object, pick it up and drive back
-			driveForward((distanceCM - 10)/100)
+			driveForward((distanceCM)/100)
 
 			claw.ChangeDutyCycle(closePWM)
+			time.sleep(2)
 
-			driveBackward((distanceCM - 10)/100)
+			driveBackward((distanceCM)/100)
+
+			claw.ChangeDutyCycle(openPWM)
 
 		else:
 			break
