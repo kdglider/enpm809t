@@ -14,6 +14,7 @@ import math
 import cv2
 import imutils
 
+'''
 ############################## EMAIL SETUP ################################
 import os
 from datetime import datetime
@@ -25,26 +26,46 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-'''
+
 #Define time stamp and record an image
 pic_time = datetime.now().strftime('%Y%m%d%H%M%S')
 command = 'raspistill -w 1280 -h 720 -vf -hf -o '+ pic_time +'.jpg' 
 os.system(command)
 
 # Email information
-smtpUser = 'your email'
-smtpPass = 'your pass'
+smtpUser = 'theateam.umd@gmail.com'
+smtpPass = 'enpm809T@umd'
 
 # Destination email information
-toAdd = ['krithideepu@gmail.com', 'your email'] #Add these email after code works 
+toAdd = ['krithideepu@gmail.com','hdong8@umd.edu','ENPM809TS19@gmail.com','skotasai@umd.edu'] 
+# Add these email after code works 
 # ENPM809TS19@gmail.com, skotasai@umd.edu
 fromAdd = smtpUser 
 subject = 'Image recorded at '+ pic_time
 msg = MIMEMultipart()
 msg['Subject'] = subject
 msg['From'] = fromAdd
-msg['To'] = toAdd
+msg['To'] = ','.join(toAdd)
 msg.preamble = "Image recorded at "+ pic_time
+
+body = MIMEText('Image recorded at ' + pic_time)
+msg.attach(body)
+
+f = open(pic_time + '.jpg', 'rb')
+img = MIMEImage(f.read())
+f.close()
+msg.attach(img)
+
+s = smtplib.SMTP('smtp.gmail.com', 587)
+s.ehlo()
+s.starttls()
+s.ehlo()
+
+s.login(smtpUser, smtpPass)
+s.sendmail(fromAdd, toAdd, msg.as_string())
+s.quit()
+
+print('Email delivered')
 '''
 
 '''
